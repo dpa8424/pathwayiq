@@ -175,7 +175,7 @@ function App() {
   const canGenerate = selClient && ipar.trim().length>50 && detailed.trim().length>50 && summary.trim().length>50;
 
   const callClaude = async (prompt, maxTokens=4000) => {
-    const resp = await fetch("https://claude-proxy.YOUR-NAME.workers.dev", {
+    const resp = await fetch("https://claude-proxy.dan-ab7.workers.dev/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] })
