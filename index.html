@@ -18,31 +18,49 @@
 </head>
 <body>
 <div id="root"></div>
-
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
 const MODEL = "claude-sonnet-4-20250514";
 
 const USERS = [
-  { id:1, name:"Admin User",   email:"admin@pathwayiq.com",             password:"pathway2024",   role:"Auditor" },
-  { id:2, name:"JP Szaltis",   email:"jp@sculpturehospitality.com",     password:"sculpture2024", role:"Manager" },
+  { id:1, name:"Admin User",  email:"admin@pathwayiq.com",          password:"pathway2024",   role:"Auditor" },
+  { id:2, name:"JP Szaltis",  email:"jp@sculpturehospitality.com",  password:"sculpture2024", role:"Manager" },
 ];
+
+// Generate last 12 Mon–Sun periods
+const generatePeriods = () => {
+  const periods = [];
+  const today = new Date();
+  // Find most recent Sunday
+  const day = today.getDay();
+  const lastSunday = new Date(today);
+  lastSunday.setDate(today.getDate() - (day === 0 ? 0 : day));
+  lastSunday.setHours(0,0,0,0);
+
+  for (let i = 0; i < 12; i++) {
+    const end = new Date(lastSunday);
+    end.setDate(lastSunday.getDate() - (i * 7));
+    const start = new Date(end);
+    start.setDate(end.getDate() - 6);
+    const fmt = d => d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+    periods.push({
+      label: `${fmt(start)} – ${fmt(end)}`,
+      start,
+      end,
+    });
+  }
+  return periods;
+};
+
+const PERIODS = generatePeriods();
 
 const fmt = d => d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
 
-const buildNextPeriod = lastEndDate => {
-  const start = new Date(lastEndDate);
-  start.setDate(start.getDate()+1);
-  const end = new Date(start);
-  end.setDate(start.getDate()+6);
-  return { start, end, label:`${fmt(start)} – ${fmt(end)}` };
-};
-
 const INIT_CLIENTS = [
-  { id:1, name:"Nonna's",              email:"dan@madcapvc.com", contact:"Nonna's Team",  type:"Restaurant", lastAudit:new Date("2026-02-08"), audits:[] },
-  { id:2, name:"The Anvil Bar & Refuge",email:"dan@madcapvc.com", contact:"Anvil Team",    type:"Bar",        lastAudit:new Date("2026-02-01"), audits:[] },
-  { id:3, name:"Seaside Grille",        email:"dan@madcapvc.com", contact:"Seaside Team",  type:"Restaurant", lastAudit:new Date("2026-01-26"), audits:[] },
+  { id:1, name:"Nonna's",               email:"dan@madcapvc.com", contact:"Nonna's Team",  type:"Restaurant", lastAudit:new Date("2026-02-08"), audits:[] },
+  { id:2, name:"The Anvil Bar & Refuge", email:"dan@madcapvc.com", contact:"Anvil Team",    type:"Bar",        lastAudit:new Date("2026-02-01"), audits:[] },
+  { id:3, name:"Seaside Grille",         email:"dan@madcapvc.com", contact:"Seaside Team",  type:"Restaurant", lastAudit:new Date("2026-01-26"), audits:[] },
 ];
 
 const FUN_FACTS = [
@@ -56,11 +74,10 @@ const FUN_FACTS = [
   "A Bevinco Rating above 98% puts an establishment in the top tier of inventory management.",
   "Friday and Saturday nights account for 60% of all bar theft incidents.",
   "Proper inventory management can increase a restaurant's net profit margin by 2–5 percentage points.",
-  "The 'free pour' method results in an average over-pour of 30% compared to measured pours.",
+  "The free pour method results in an average over-pour of 30% compared to measured pours.",
   "High-end whiskey and premium spirits are 3x more likely to be targets of staff theft.",
 ];
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
 const ratingColor = r => { const v=parseFloat(r); return v>=98?"#10b981":v>=90?"#fbbf24":"#f87171"; };
 
 const Logo = () => (
@@ -72,12 +89,7 @@ const Logo = () => (
 );
 
 const Pill = ({ color, children }) => {
-  const C = {
-    green:  {bg:"#064e3b",text:"#34d399",border:"#065f46"},
-    red:    {bg:"#450a0a",text:"#f87171",border:"#7f1d1d"},
-    yellow: {bg:"#451a03",text:"#fbbf24",border:"#78350f"},
-    blue:   {bg:"#0c1a4a",text:"#93c5fd",border:"#1e3a8a"},
-  };
+  const C = { green:{bg:"#064e3b",text:"#34d399",border:"#065f46"}, red:{bg:"#450a0a",text:"#f87171",border:"#7f1d1d"}, yellow:{bg:"#451a03",text:"#fbbf24",border:"#78350f"}, blue:{bg:"#0c1a4a",text:"#93c5fd",border:"#1e3a8a"} };
   const c = C[color]||C.blue;
   return <span style={{padding:"2px 8px",borderRadius:999,fontSize:11,fontWeight:700,background:c.bg,color:c.text,border:`1px solid ${c.border}`}}>{children}</span>;
 };
@@ -86,11 +98,11 @@ const RatingBar = ({ value }) => {
   const pct = Math.min(parseFloat(value)||0,105);
   const color = pct>=98?"#10b981":pct>=90?"#fbbf24":"#f87171";
   return (
-    <div style={{display:"flex",alignItems:"center",gap:8}}>
-      <div style={{flex:1,borderRadius:99,height:8,background:"#1f2937"}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,width:"100%"}}>
+      <div style={{flex:1,borderRadius:99,height:8,background:"#1f2937",minWidth:0}}>
         <div style={{height:8,borderRadius:99,width:`${Math.min(pct,100)}%`,background:color}}/>
       </div>
-      <span style={{fontSize:11,fontWeight:700,width:52,textAlign:"right",color}}>{value}</span>
+      <span style={{fontSize:11,fontWeight:700,whiteSpace:"nowrap",color}}>{value}</span>
     </div>
   );
 };
@@ -118,13 +130,12 @@ const Btn = ({ onClick, disabled, color="indigo", children, small }) => {
   const c = C[color]||C.indigo;
   return (
     <button onClick={onClick} disabled={disabled}
-      style={{padding:small?"6px 12px":"10px 20px",fontSize:small?11:13,fontWeight:700,borderRadius:8,border:"none",background:disabled?c.dis:c.bg,color:disabled?"#6b7280":"#fff",cursor:disabled?"not-allowed":"pointer",transition:"opacity 0.2s"}}>
+      style={{padding:small?"6px 12px":"10px 20px",fontSize:small?11:13,fontWeight:700,borderRadius:8,border:"none",background:disabled?c.dis:c.bg,color:disabled?"#6b7280":"#fff",cursor:disabled?"not-allowed":"pointer"}}>
       {children}
     </button>
   );
 };
 
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
 function App() {
   const [user,       setUser]       = useState(null);
   const [screen,     setScreen]     = useState("login");
@@ -158,10 +169,14 @@ function App() {
     return ()=>clearInterval(factRef.current);
   },[screen]);
 
+  // Auto-select next period when client chosen
   useEffect(()=>{
     if(!selClient) return;
     const c = clients.find(c=>c.id===selClient);
-    if(c) setPeriod(buildNextPeriod(c.lastAudit));
+    if(!c) return;
+    // Find first period ending after lastAudit
+    const next = PERIODS.find(p => p.end > c.lastAudit) || PERIODS[0];
+    setPeriod(next);
   },[selClient]);
 
   const handleLogin = () => {
@@ -170,19 +185,19 @@ function App() {
     setUser(u); setScreen("input"); setLoginErr("");
   };
 
-  const resetForm = () => { setIpar(""); setDetailed(""); setSummary(""); setReport(null); setFeedback(""); setStatus(null); setEmailHtml(""); setEditEmail(""); setSelClient(null); setPeriod(null); };
+  const resetForm = () => { setIpar(""); setDetailed(""); setSummary(""); setReport(null); setFeedback(""); setStatus(null); setEmailHtml(""); setEditEmail(""); };
 
-  const canGenerate = selClient && ipar.trim().length>50 && detailed.trim().length>50 && summary.trim().length>50;
+  const canGenerate = selClient && period && ipar.trim().length>50 && detailed.trim().length>50 && summary.trim().length>50;
 
   const callClaude = async (prompt, maxTokens=4000) => {
     const resp = await fetch("https://claude-proxy.dan-ab7.workers.dev/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] })
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:MODEL,max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})
     });
     const data = await resp.json();
-    if (data.error) throw new Error(data.error.message);
-    return data.content?.map(b => b.text || "").join("").trim();
+    if(data.error) throw new Error(data.error.message);
+    return data.content?.map(b=>b.text||"").join("").trim();
   };
 
   const generate = async () => {
@@ -225,7 +240,7 @@ Rules: rating targets: liquor<3%, wine<5%, champagne<5%, beer<2%. 5-8 top issues
       const issues = rpt.topAuditIssues||[];
       const body = await callClaude(`You are JP Szaltis, a trusted hospitality advisor at Sculpture Hospitality. Write a warm, direct, personalized weekly audit email to the team at ${client.name}.
 
-Tone: conversational trusted advisor, NOT a dry auditor. Reference specific brands. Call out wins AND problems. Focus on brands that sold only 1 drink as teaching moments (specific bartender coaching). Write like a human.
+Tone: conversational trusted advisor, NOT a dry auditor. Reference specific brands. Call out wins AND problems. Focus on brands that sold only 1 drink as teaching moments. Write like a human.
 
 AUDIT DATA:
 - Overall Bevinco Rating: ${sr.overallRating}
@@ -239,23 +254,57 @@ AUDIT DATA:
 TOP ISSUES:
 ${issues.map(i=>`- ${i.brand}: ${i.missing} oz missing, ${i.pctMissing}`).join("\n")}
 
-Write the email body using ONLY <p>, <ul>, <li>, <strong>, <br> tags. No html/head/body/style tags. No markdown. Start with "Hey Team," and end with this exact signature:
+Write the email body using ONLY <p>, <ul>, <li>, <strong>, <br> tags. No html/head/body/style tags. No markdown. Start with "Hey Team," and end with:
 <p style="margin-top:24px;font-size:13px;color:#374151"><strong>James P. Szaltis</strong><br/>Offices: Pensacola, Ft Walton, Destin, and Orlando<br/>Sculpture Hospitality<br/>M 407.810.2188<br/>E j.szaltis@sculpturehospitality.com<br/>W sculpturehospitality.com</p>
 
-Include: 1) Warm personalized opener 2) Category wins celebrated 3) "Focus Areas This Week" with top 3-5 brands + oz + % 4) "Other Notable Losses" for brands with 1 drink sold that were over-poured 5) Encouraging close.`,2000);
+Include: 1) Warm opener 2) Category wins 3) Focus Areas This Week with top 3-5 brands + oz + % 4) Other Notable Losses for 1-drink over-pours 5) Encouraging close.`,2000);
       setEmailHtml(body);
       setEditEmail(body);
     } catch(e) {
-      const fallback = "<p>Email generation failed. Please compose manually using the audit data above.</p>";
-      setEmailHtml(fallback); setEditEmail(fallback);
+      const fb = "<p>Email generation failed. Please compose manually.</p>";
+      setEmailHtml(fb); setEditEmail(fb);
     } finally { setGenEmail(false); }
   };
 
+  // ── MAILTO APPROVE ──
   const handleApprove = () => {
     const audit = { id:Date.now(), client:client.name, clientEmail:client.email, contact:client.contact, period:period.label, report, feedback, emailHtml:editEmail, status:"approved", approvedBy:user.name, approvedAt:new Date().toLocaleString() };
     setSaved(p=>[audit,...p]);
     setClients(p=>p.map(c=>c.id===selClient?{...c,lastAudit:period.end,audits:[audit,...c.audits]}:c));
     setStatus("approved");
+
+    // Build plain text email body for mailto
+    const sr = report?.staffReport||{};
+    const issues = report?.topAuditIssues||[];
+    const plainText =
+`${editEmail
+  .replace(/<br\s*\/?>/gi,"\n")
+  .replace(/<\/p>/gi,"\n\n")
+  .replace(/<\/li>/gi,"\n")
+  .replace(/<li>/gi,"• ")
+  .replace(/<[^>]+>/g,"")
+  .replace(/&amp;/g,"&")
+  .replace(/&nbsp;/g," ")
+  .trim()}
+
+───────────────────────────────
+${client.name} Bevinco Report — ${period.label}
+Overall Rating: ${sr.overallRating} | Revenue Lost: ${sr.potentialRevenueLost}
+
+CATEGORY SUMMARY
+Liquor:    ${sr.liquor?.oz||'—'} oz missing | ${sr.liquor?.pct||'—'} | Rating: ${sr.liquor?.rating||'—'}
+Wine:      ${sr.wine?.oz||'—'} oz missing | ${sr.wine?.pct||'—'} | Rating: ${sr.wine?.rating||'—'}
+Champagne: ${sr.champagne?.oz||'—'} oz missing | ${sr.champagne?.pct||'—'} | Rating: ${sr.champagne?.rating||'—'}
+Beer:      ${sr.beer?.bottles||'—'} btl missing | Rating: ${sr.beer?.rating||'—'}
+
+TOP AUDIT ISSUES
+${issues.map(i=>`• ${i.brand} — ${i.missing} missing (${i.pctMissing})`).join("\n")}
+
+Sent via Pathway IQ | Approved by ${user.name} | ${new Date().toLocaleString()}`;
+
+    const subject = encodeURIComponent(`${client.name} Bevinco Report — ${period.label}`);
+    const body = encodeURIComponent(plainText);
+    window.location.href = `mailto:${client.email}?subject=${subject}&body=${body}`;
   };
 
   const handleDeny = () => { setStatus("denied"); resetForm(); setScreen("input"); };
@@ -293,10 +342,10 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
 <div class="ftr">Sent via Pathway IQ · Sculpture Hospitality · Approved by ${usr?.name} · ${new Date().toLocaleString()}</div>
 </div></body></html>`;
 
-  // ── NAV ──────────────────────────────────────────────────────────────────
+  // ── NAV ──
   const Nav = ({ sub }) => (
     <div style={{background:"#0a0f1e",borderBottom:"1px solid #1f2937",padding:"12px 24px"}}>
-      <div style={{maxWidth:900,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div style={{maxWidth:960,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <Logo/>
           <div>
@@ -316,11 +365,11 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
   const wrap = (children,sub) => (
     <div style={{background:"#030712",minHeight:"100vh"}}>
       <Nav sub={sub}/>
-      <div style={{maxWidth:900,margin:"0 auto",padding:"32px 24px"}}>{children}</div>
+      <div style={{maxWidth:960,margin:"0 auto",padding:"32px 24px"}}>{children}</div>
     </div>
   );
 
-  // ── LOGIN ─────────────────────────────────────────────────────────────────
+  // ── LOGIN ──
   if(screen==="login") return (
     <div style={{background:"#030712",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
       <div style={{width:"100%",maxWidth:400,padding:"0 24px"}}>
@@ -330,13 +379,10 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
         </div>
         <div style={{background:"#0a0f1e",border:"1px solid #1f2937",borderRadius:16,padding:32,display:"flex",flexDirection:"column",gap:16}}>
           <div style={{fontSize:17,fontWeight:700}}>Sign In</div>
-          {["EMAIL","PASSWORD"].map((lbl,i)=>(
+          {[["EMAIL","text",loginEmail,setLoginEmail,"you@example.com"],["PASSWORD","password",loginPass,setLoginPass,"••••••••"]].map(([lbl,type,val,set,ph])=>(
             <div key={lbl} style={{display:"flex",flexDirection:"column",gap:4}}>
               <label style={{fontSize:11,fontWeight:700,color:"#9ca3af"}}>{lbl}</label>
-              <input type={i===1?"password":"text"} value={i===0?loginEmail:loginPass}
-                onChange={e=>i===0?setLoginEmail(e.target.value):setLoginPass(e.target.value)}
-                onKeyDown={e=>e.key==="Enter"&&handleLogin()}
-                placeholder={i===0?"you@example.com":"••••••••"}
+              <input type={type} value={val} onChange={e=>set(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleLogin()} placeholder={ph}
                 style={{borderRadius:8,padding:"10px 12px",fontSize:13,background:"#111827",border:`1.5px solid ${loginErr?"#7f1d1d":"#374151"}`,color:"#f9fafb",outline:"none"}}/>
             </div>
           ))}
@@ -348,7 +394,7 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
     </div>
   );
 
-  // ── HISTORY ───────────────────────────────────────────────────────────────
+  // ── HISTORY ──
   if(screen==="history") return wrap(<>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
       <div style={{fontSize:17,fontWeight:700}}>Approved Reports</div>
@@ -372,61 +418,68 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
             <Pill color="green">Approved</Pill>
           </div>
         </div>
-        {a.emailHtml&&(
-          <div style={{border:"1px solid #1f2937",borderRadius:8,overflow:"hidden"}}>
-            <div style={{padding:"6px 12px",fontSize:11,fontWeight:700,background:"#111827",color:"#9ca3af"}}>CLIENT EMAIL PREVIEW</div>
-            <div style={{padding:12,background:"#fff",color:"#111827",fontSize:12,maxHeight:80,overflow:"hidden"}} dangerouslySetInnerHTML={{__html:a.emailHtml}}/>
-          </div>
-        )}
       </div>
     ))}
   </>,"Audit History");
 
-  // ── INPUT ─────────────────────────────────────────────────────────────────
+  // ── INPUT ──
   if(screen==="input") return wrap(<>
     <div style={{marginBottom:24}}>
       <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>Weekly Audit Data Entry</div>
-      <div style={{fontSize:13,color:"#9ca3af"}}>Select the client, confirm the period, then paste the three report files from Excel.</div>
+      <div style={{fontSize:13,color:"#9ca3af"}}>Select the client and audit period, then paste the three report files from Excel.</div>
     </div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}}>
+
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+      {/* Client dropdown */}
       <div>
         <label style={{fontSize:11,fontWeight:700,color:"#9ca3af",display:"block",marginBottom:4}}>CLIENT</label>
-        <select value={selClient||""} onChange={e=>setSelClient(Number(e.target.value))}
+        <select value={selClient||""} onChange={e=>{setSelClient(Number(e.target.value));}}
           style={{width:"100%",borderRadius:8,padding:"10px 12px",fontSize:13,fontWeight:600,background:"#111827",border:"1.5px solid #374151",color:selClient?"#f9fafb":"#6b7280",outline:"none"}}>
           <option value="">— Select a client —</option>
           {clients.map(c=><option key={c.id} value={c.id}>{c.name} ({c.type})</option>)}
         </select>
       </div>
+
+      {/* Period picklist */}
       <div>
         <label style={{fontSize:11,fontWeight:700,color:"#9ca3af",display:"block",marginBottom:4}}>AUDIT PERIOD</label>
-        <div style={{borderRadius:8,padding:"10px 12px",fontSize:13,fontWeight:600,background:"#111827",border:"1.5px solid #374151",color:period?"#f9fafb":"#4b5563"}}>
-          {period?period.label:"← Select a client to auto-generate"}
-        </div>
+        <select value={period?.label||""} onChange={e=>setPeriod(PERIODS.find(p=>p.label===e.target.value))}
+          disabled={!selClient}
+          style={{width:"100%",borderRadius:8,padding:"10px 12px",fontSize:13,fontWeight:600,background:"#111827",border:"1.5px solid #374151",color:period?"#f9fafb":"#6b7280",outline:"none",opacity:selClient?1:0.5}}>
+          <option value="">— Select a period —</option>
+          {PERIODS.map(p=>(
+            <option key={p.label} value={p.label}>{p.label}</option>
+          ))}
+        </select>
       </div>
     </div>
+
     {selClient&&period&&(
       <div style={{background:"#0c1a4a",border:"1px solid #1e3a8a",borderRadius:10,padding:"12px 16px",marginBottom:20,display:"flex",gap:10,alignItems:"center"}}>
         <span style={{fontSize:18}}>📅</span>
-        <div style={{fontSize:13}}><span style={{color:"#93c5fd",fontWeight:700}}>{client?.name}</span> — Next period: <span style={{color:"#f9fafb",fontWeight:600}}>{period.label}</span> · Last audit: <span style={{color:"#6b7280"}}>{fmt(client?.lastAudit)}</span></div>
+        <div style={{fontSize:13}}><span style={{color:"#93c5fd",fontWeight:700}}>{client?.name}</span> — Audit period: <span style={{color:"#f9fafb",fontWeight:600}}>{period.label}</span></div>
       </div>
     )}
+
     <div style={{display:"flex",flexDirection:"column",gap:20,marginBottom:24}}>
       <PasteBox label="inteliPar Report" sublabel={`${client?.name||"[CLIENT]"} - inteliPar Report`} value={ipar} onChange={setIpar}/>
       <PasteBox label="Detailed Variance Report" sublabel={`${client?.name||"[CLIENT]"} - detailed Variance Report`} value={detailed} onChange={setDetailed}/>
       <PasteBox label="Summary Variance Report" sublabel={`${client?.name||"[CLIENT]"} - Summary Variance Report`} value={summary} onChange={setSummary}/>
     </div>
+
     <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:24}}>
       <label style={{fontSize:11,fontWeight:700,color:"#9ca3af"}}>AUDITOR NOTES <span style={{color:"#4b5563",fontWeight:400}}>(optional — woven into client email)</span></label>
       <textarea value={feedback} onChange={e=>setFeedback(e.target.value)} rows={3}
-        placeholder="e.g. Spoke with the manager — two new bartenders started this week. Remind them to ring in practice drinks…"
+        placeholder="e.g. Spoke with the manager — two new bartenders started this week…"
         style={{borderRadius:12,padding:"12px 16px",fontSize:13,resize:"vertical",background:"#111827",border:"1.5px solid #374151",color:"#f9fafb",outline:"none"}}/>
     </div>
+
     <Btn onClick={generate} disabled={!canGenerate}>
-      {canGenerate?"Generate Bevinco Report →":"Select client + paste all 3 reports to continue"}
+      {canGenerate?"Generate Bevinco Report →":"Select client + period + paste all 3 reports to continue"}
     </Btn>
   </>,"New Audit");
 
-  // ── PROCESSING ────────────────────────────────────────────────────────────
+  // ── PROCESSING ──
   if(screen==="processing") return (
     <div style={{background:"#030712",minHeight:"100vh",display:"flex",flexDirection:"column"}}>
       <Nav sub="Analyzing..."/>
@@ -446,12 +499,12 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
     </div>
   );
 
-  // ── REVIEW ────────────────────────────────────────────────────────────────
+  // ── REVIEW ──
   if(screen==="review"&&report){
     const TABS = [{id:"staff",l:"Staff Report"},{id:"issues",l:"Top Issues"},{id:"perf",l:"Performance"},{id:"insights",l:"Insights"},{id:"email",l:"📧 Client Email"}];
     const sr = report.staffReport||{};
+
     return wrap(<>
-      {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
         <div>
           <div style={{fontSize:10,fontWeight:700,letterSpacing:3,color:"#6366f1",marginBottom:2}}>{client?.name?.toUpperCase()}</div>
@@ -461,13 +514,13 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
         <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
           <Btn small color="gray" onClick={exportReport}>⬇ Export HTML</Btn>
           {status==="pending"&&<><Btn small color="red" onClick={handleDeny}>✕ Deny</Btn><Btn small color="green" onClick={handleApprove}>✓ Approve & Send</Btn></>}
-          {status==="approved"&&<Pill color="green">✓ Approved — Sent to {client?.email}</Pill>}
+          {status==="approved"&&<Pill color="green">✓ Approved — Email Opened</Pill>}
         </div>
       </div>
 
       {status==="pending"&&(
         <div style={{background:"#451a03",border:"1px solid #78350f",borderRadius:10,padding:"12px 16px",marginBottom:16,display:"flex",gap:10,alignItems:"center",fontSize:13}}>
-          <span>⏳</span><span><strong style={{color:"#fbbf24"}}>Pending Approval</strong> — Review the report and email draft, then Approve to send to {client?.contact} at {client?.email}.</span>
+          <span>⏳</span><span><strong style={{color:"#fbbf24"}}>Pending Approval</strong> — Review the report and email, then Approve to open your email client pre-filled and ready to send.</span>
         </div>
       )}
 
@@ -505,7 +558,6 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
         ))}
       </div>
 
-      {/* Tab Content */}
       <div style={{background:"#0a0f1e",border:"1px solid #1f2937",borderRadius:16,overflow:"hidden",marginBottom:16}}>
 
         {/* STAFF */}
@@ -529,35 +581,58 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
         {/* ISSUES */}
         {tab==="issues"&&<>
           <div style={{padding:"12px 20px",fontSize:13,fontWeight:700,background:"#111827",borderBottom:"1px solid #1f2937"}}>TOP AUDIT ISSUES</div>
-          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1fr",padding:"8px 20px",fontSize:11,fontWeight:700,color:"#6b7280",background:"#0d1117",borderBottom:"1px solid #1f2937"}}>
-            {["Brand","Category","Used","Sold","Missing","% Missing"].map(h=><span key={h}>{h}</span>)}
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",minWidth:600}}>
+              <thead>
+                <tr style={{background:"#0d1117"}}>
+                  {["Brand","Category","Used","Sold","Missing","% Missing"].map(h=>(
+                    <th key={h} style={{padding:"8px 16px",fontSize:11,fontWeight:700,color:"#6b7280",textAlign:"left",borderBottom:"1px solid #1f2937"}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(report.topAuditIssues||[]).map((iss,i)=>(
+                  <tr key={i} style={{borderBottom:"1px solid #111827"}}>
+                    <td style={{padding:"12px 16px",fontWeight:600,fontSize:13}}>{iss.brand}</td>
+                    <td style={{padding:"12px 16px",fontSize:11,color:"#9ca3af"}}>{iss.category}</td>
+                    <td style={{padding:"12px 16px",fontSize:13}}>{iss.used}</td>
+                    <td style={{padding:"12px 16px",fontSize:13}}>{iss.sold}</td>
+                    <td style={{padding:"12px 16px",fontSize:13,fontWeight:700,color:iss.missing?.startsWith("-")?"#f87171":"#fbbf24"}}>{iss.missing}</td>
+                    <td style={{padding:"12px 16px"}}><Pill color={iss.severity==="high"?"red":iss.severity==="medium"?"yellow":"blue"}>{iss.pctMissing}</Pill></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {(report.topAuditIssues||[]).map((iss,i)=>(
-            <div key={i} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1fr",padding:"12px 20px",fontSize:12,alignItems:"center",borderBottom:"1px solid #111827"}}>
-              <span style={{fontWeight:600}}>{iss.brand}</span>
-              <span style={{fontSize:11,color:"#9ca3af"}}>{iss.category}</span>
-              <span>{iss.used}</span><span>{iss.sold}</span>
-              <span style={{color:iss.missing?.startsWith("-")?"#f87171":"#fbbf24",fontWeight:700}}>{iss.missing}</span>
-              <Pill color={iss.severity==="high"?"red":iss.severity==="medium"?"yellow":"blue"}>{iss.pctMissing}</Pill>
-            </div>
-          ))}
         </>}
 
-        {/* PERFORMANCE */}
+        {/* PERFORMANCE — fixed layout */}
         {tab==="perf"&&<>
           <div style={{padding:"12px 20px",fontSize:13,fontWeight:700,background:"#111827",borderBottom:"1px solid #1f2937"}}>CATEGORY PERFORMANCE</div>
-          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 2fr 1fr",padding:"8px 20px",fontSize:11,fontWeight:700,color:"#6b7280",background:"#0d1117",borderBottom:"1px solid #1f2937"}}>
-            {["Category","Pour Cost","Ideal","Sculpture Rating","Variance"].map(h=><span key={h}>{h}</span>)}
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",minWidth:640}}>
+              <thead>
+                <tr style={{background:"#0d1117"}}>
+                  {["Category","Pour Cost","Ideal Pour Cost","Sculpture Rating","Variance"].map(h=>(
+                    <th key={h} style={{padding:"8px 16px",fontSize:11,fontWeight:700,color:"#6b7280",textAlign:"left",borderBottom:"1px solid #1f2937",whiteSpace:"nowrap"}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(report.categoryPerformance||[]).map((cat,i)=>(
+                  <tr key={i} style={{borderBottom:"1px solid #111827"}}>
+                    <td style={{padding:"14px 16px",fontWeight:600,fontSize:13,whiteSpace:"nowrap"}}>{cat.name}</td>
+                    <td style={{padding:"14px 16px",fontSize:13}}>{cat.pourCost}</td>
+                    <td style={{padding:"14px 16px",fontSize:13,color:"#6b7280"}}>{cat.idealPourCost}</td>
+                    <td style={{padding:"14px 16px",minWidth:180}}>
+                      <RatingBar value={cat.sculptureRating?.replace("%","")||"0"}/>
+                    </td>
+                    <td style={{padding:"14px 16px"}}><Pill color={cat.pctMissing?.startsWith("+")?"yellow":"green"}>{cat.pctMissing}</Pill></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {(report.categoryPerformance||[]).map((cat,i)=>(
-            <div key={i} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 2fr 1fr",padding:"14px 20px",alignItems:"center",borderBottom:"1px solid #111827"}}>
-              <span style={{fontWeight:600,fontSize:13}}>{cat.name}</span>
-              <span style={{fontSize:13}}>{cat.pourCost}</span>
-              <span style={{fontSize:13,color:"#6b7280"}}>{cat.idealPourCost}</span>
-              <RatingBar value={cat.sculptureRating?.replace("%","")||"0"}/>
-              <Pill color={cat.pctMissing?.startsWith("+")?"yellow":"green"}>{cat.pctMissing}</Pill>
-            </div>
-          ))}
         </>}
 
         {/* INSIGHTS */}
@@ -601,7 +676,9 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
             ):emailTab==="preview"?(
               <div style={{border:"1px solid #1f2937",borderRadius:10,overflow:"hidden"}}>
                 <div style={{padding:"8px 16px",background:"#111827",borderBottom:"1px solid #1f2937",fontSize:11,color:"#6b7280"}}>
-                  <strong style={{color:"#9ca3af"}}>From:</strong> jp@sculpturehospitality.com &nbsp;·&nbsp; <strong style={{color:"#9ca3af"}}>To:</strong> {client?.email} &nbsp;·&nbsp; <strong style={{color:"#9ca3af"}}>Subject:</strong> {client?.name} Bevinco Report — {period?.label}
+                  <strong style={{color:"#9ca3af"}}>From:</strong> jp@sculpturehospitality.com &nbsp;·&nbsp;
+                  <strong style={{color:"#9ca3af"}}>To:</strong> {client?.email} &nbsp;·&nbsp;
+                  <strong style={{color:"#9ca3af"}}>Subject:</strong> {client?.name} Bevinco Report — {period?.label}
                 </div>
                 <div style={{padding:24,background:"#fff",color:"#111827",fontSize:14,lineHeight:1.7}} dangerouslySetInnerHTML={{__html:editEmail||emailHtml}}/>
               </div>
@@ -620,6 +697,14 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
         )}
       </div>
 
+      {/* Auditor notes */}
+      <div style={{background:"#0a0f1e",border:"1px solid #1f2937",borderRadius:16,padding:20,marginBottom:16}}>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>💬 Auditor Notes <span style={{fontWeight:400,fontSize:11,color:"#6b7280"}}>(included in client email if provided)</span></div>
+        <textarea value={feedback} onChange={e=>setFeedback(e.target.value)} rows={3}
+          placeholder="Add any observations or context from this week's audit…"
+          style={{width:"100%",borderRadius:10,padding:"12px 16px",fontSize:13,resize:"vertical",background:"#111827",border:"1.5px solid #374151",color:"#f9fafb",outline:"none"}}/>
+      </div>
+
       {/* Action bar */}
       {status==="pending"&&(
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:"#111827",border:"1px solid #1f2937",borderRadius:16,padding:"16px 20px"}}>
@@ -633,7 +718,7 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
       )}
       {status==="approved"&&(
         <div style={{background:"#064e3b22",border:"1px solid #065f46",borderRadius:16,padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontSize:13,color:"#34d399"}}>✓ Approved and sent to {client?.contact} at {client?.email}</div>
+          <div style={{fontSize:13,color:"#34d399"}}>✓ Approved — your email client has opened with the report pre-filled. Hit send to deliver to {client?.email}.</div>
           <Btn color="indigo" onClick={()=>{resetForm();setScreen("input");}}>Start New Audit →</Btn>
         </div>
       )}
