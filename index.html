@@ -602,19 +602,147 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
         {/* STAFF */}
         {tab==="staff"&&<>
           <div style={{padding:"12px 20px",fontSize:13,fontWeight:700,background:"#111827",borderBottom:"1px solid #1f2937"}}>STAFF REPORT — {client?.name}</div>
-          {[["Missing Liquor","liquor","3%","oz"],["Missing Wine","wine","5%","oz"],["Missing Champagne","champagne","5%","oz"],["Missing Bottled Beer","beer","2%","btl"]].map(([lbl,k,thresh,unit])=>(
-            <div key={k} style={{padding:"16px 20px",borderBottom:"1px solid #1f2937"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                <div style={{fontWeight:600,fontSize:13}}>{lbl}</div>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:11,color:"#6b7280"}}>Target: under {thresh}</span>
-                  <Pill color={parseFloat(sr[k]?.rating)>=95?"green":parseFloat(sr[k]?.rating)>=85?"yellow":"red"}>{sr[k]?.rating}</Pill>
-                </div>
+
+          {/* Grade + Key Metrics Row */}
+          <div style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr 1fr",gap:0,borderBottom:"1px solid #1f2937"}}>
+            {/* Letter Grade */}
+            <div style={{padding:"24px 28px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRight:"1px solid #1f2937",background:"#0a0f1e"}}>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#6b7280",marginBottom:4}}>GRADE</div>
+              <div style={{fontSize:64,fontWeight:900,lineHeight:1,color:
+                parseFloat(sr.overallRating)>=100?"#10b981":
+                parseFloat(sr.overallRating)>=95?"#34d399":
+                parseFloat(sr.overallRating)>=90?"#fbbf24":
+                parseFloat(sr.overallRating)>=85?"#f97316":"#f87171"
+              }}>
+                {parseFloat(sr.overallRating)>=100?"A":
+                 parseFloat(sr.overallRating)>=95?"A-":
+                 parseFloat(sr.overallRating)>=90?"B+":
+                 parseFloat(sr.overallRating)>=85?"B":"C"}
               </div>
-              <div style={{fontSize:12,color:"#9ca3af",marginBottom:8}}>{sr[k]?.oz??sr[k]?.bottles??'—'} {unit} · {sr[k]?.pct}</div>
-              <RatingBar value={sr[k]?.rating?.replace("%","")||"0"}/>
+              <div style={{fontSize:11,color:"#6b7280",marginTop:4}}>{sr.overallRating}</div>
             </div>
-          ))}
+            {/* Revenue Lost */}
+            <div style={{padding:"20px",display:"flex",flexDirection:"column",justifyContent:"center",borderRight:"1px solid #1f2937"}}>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#6b7280",marginBottom:6}}>POTENTIAL REVENUE LOST</div>
+              <div style={{fontSize:28,fontWeight:900,color:"#f87171"}}>{sr.potentialRevenueLost}</div>
+              <div style={{fontSize:11,color:"#6b7280",marginTop:4}}>This period</div>
+            </div>
+            {/* On Hand */}
+            <div style={{padding:"20px",display:"flex",flexDirection:"column",justifyContent:"center",borderRight:"1px solid #1f2937"}}>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#6b7280",marginBottom:6}}>ON HAND VALUE</div>
+              <div style={{fontSize:28,fontWeight:900,color:"#f9fafb"}}>{report.inventorySummary?.totalOnHandCost||"—"}</div>
+              <div style={{fontSize:11,color:"#6b7280",marginTop:4}}>Current inventory</div>
+            </div>
+            {/* Pour Cost */}
+            <div style={{padding:"20px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#6b7280",marginBottom:6}}>POUR COST</div>
+              <div style={{fontSize:28,fontWeight:900,color:"#f9fafb"}}>{report.inventorySummary?.grandTotalPourCost||"—"}</div>
+              <div style={{fontSize:11,color:"#6b7280",marginTop:4}}>Actual this period</div>
+            </div>
+          </div>
+
+          {/* Class Variances Table */}
+          <div style={{borderBottom:"1px solid #1f2937"}}>
+            <div style={{padding:"10px 20px",fontSize:11,fontWeight:700,color:"#6b7280",background:"#0d1117",borderBottom:"1px solid #1f2937",letterSpacing:1}}>CLASS VARIANCES</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",padding:"8px 20px",fontSize:11,fontWeight:700,color:"#4b5563",borderBottom:"1px solid #1f2937"}}>
+              {["Category","Missing","% Missing","Target","Status"].map(h=><span key={h}>{h}</span>)}
+            </div>
+            {[
+              ["Liquor","liquor","< -3%","oz"],
+              ["Wine","wine","< -5%","oz"],
+              ["Champagne","champagne","< -5%","oz"],
+              ["Beer","beer","< -2%","btl"]
+            ].map(([lbl,k,target,unit])=>{
+              const pct = parseFloat(sr[k]?.pct)||0;
+              const rating = parseFloat(sr[k]?.rating)||0;
+              const isOk = rating >= 98;
+              const isAlert = rating < 90;
+              return (
+                <div key={k} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",padding:"12px 20px",fontSize:13,alignItems:"center",borderBottom:"1px solid #111827"}}>
+                  <span style={{fontWeight:600,textTransform:"capitalize"}}>{lbl}</span>
+                  <span style={{color:"#9ca3af"}}>{sr[k]?.oz??sr[k]?.bottles??'—'} {unit}</span>
+                  <span style={{fontWeight:700,color:isOk?"#10b981":isAlert?"#f87171":"#fbbf24"}}>{sr[k]?.pct||"—"}</span>
+                  <span style={{fontSize:11,color:"#6b7280"}}>{target}</span>
+                  <span style={{fontWeight:700,padding:"2px 10px",borderRadius:99,fontSize:11,display:"inline-block",
+                    background:isOk?"#064e3b":isAlert?"#450a0a":"#451a03",
+                    color:isOk?"#34d399":isAlert?"#f87171":"#fbbf24"}}>
+                    {isOk?"✓ OK":isAlert?"⚠ Alert":"Watch"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 4-Week Trend Table */}
+          <div style={{borderBottom:"1px solid #1f2937"}}>
+            <div style={{padding:"10px 20px",fontSize:11,fontWeight:700,color:"#6b7280",background:"#0d1117",borderBottom:"1px solid #1f2937",letterSpacing:1}}>VARIANCE TREND — LAST 4 PERIODS</div>
+            <div style={{display:"grid",gridTemplateColumns:"1.5fr 1fr 1fr 1fr 1fr",padding:"8px 20px",fontSize:11,fontWeight:700,color:"#4b5563",borderBottom:"1px solid #1f2937"}}>
+              {["Period","Liquor","Wine","Champagne","Beer"].map(h=><span key={h}>{h}</span>)}
+            </div>
+            {/* Current period row + placeholder historical rows */}
+            {[
+              {period:period?.label, liq:sr.liquor?.pct, wine:sr.wine?.pct, champ:sr.champagne?.pct, beer:sr.beer?.pct, current:true},
+              {period:"Previous period", liq:"—", wine:"—", champ:"—", beer:"—", current:false},
+              {period:"2 periods ago", liq:"—", wine:"—", champ:"—", beer:"—", current:false},
+              {period:"3 periods ago", liq:"—", wine:"—", champ:"—", beer:"—", current:false},
+            ].map((row,i)=>(
+              <div key={i} style={{display:"grid",gridTemplateColumns:"1.5fr 1fr 1fr 1fr 1fr",padding:"11px 20px",fontSize:12,alignItems:"center",borderBottom:"1px solid #111827",background:row.current?"#0c1a4a":"transparent"}}>
+                <span style={{fontWeight:row.current?700:400,color:row.current?"#93c5fd":"#6b7280",fontSize:11}}>{row.period}</span>
+                {[row.liq,row.wine,row.champ,row.beer].map((v,j)=>{
+                  const num = parseFloat(v)||0;
+                  const color = v==="—"?"#4b5563":num<0?"#10b981":num>5?"#f87171":"#fbbf24";
+                  return <span key={j} style={{fontWeight:700,color}}>{v||"—"}</span>;
+                })}
+              </div>
+            ))}
+            <div style={{padding:"8px 20px",fontSize:11,color:"#4b5563",fontStyle:"italic"}}>
+              Historical trend data will populate as additional weeks are audited in the system.
+            </div>
+          </div>
+
+          {/* Loss Leaders */}
+          <div style={{borderBottom:"1px solid #1f2937"}}>
+            <div style={{padding:"10px 20px",fontSize:11,fontWeight:700,color:"#6b7280",background:"#0d1117",borderBottom:"1px solid #1f2937",letterSpacing:1}}>LOSS LEADERS — TOP ISSUES BY COST</div>
+            {(report.topAuditIssues||[]).slice(0,8).map((iss,i)=>{
+              const cost = parseFloat(iss.missing?.replace(/[^0-9.-]/g,""))||0;
+              const maxCost = Math.max(...(report.topAuditIssues||[]).map(x=>Math.abs(parseFloat(x.missing?.replace(/[^0-9.-]/g,""))||0)));
+              const barPct = maxCost > 0 ? (Math.abs(cost)/maxCost)*100 : 0;
+              const isHigh = iss.severity==="high";
+              return (
+                <div key={i} style={{padding:"10px 20px",borderBottom:"1px solid #111827"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                    <div>
+                      <span style={{fontWeight:600,fontSize:12}}>{iss.brand}</span>
+                      <span style={{fontSize:11,color:"#6b7280",marginLeft:8}}>{iss.category}</span>
+                    </div>
+                    <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                      <span style={{fontSize:12,fontWeight:700,color:"#f87171"}}>{iss.missing}</span>
+                      <Pill color={isHigh?"red":iss.severity==="medium"?"yellow":"blue"}>{iss.pctMissing}</Pill>
+                    </div>
+                  </div>
+                  <div style={{height:6,borderRadius:99,background:"#1f2937",overflow:"hidden"}}>
+                    <div style={{height:6,borderRadius:99,width:`${barPct}%`,background:isHigh?"#dc2626":iss.severity==="medium"?"#d97706":"#6366f1"}}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Item Focus — 100% loss items */}
+          {(report.topAuditIssues||[]).filter(i=>i.lossType==="not_rung_up"||i.pctMissing?.includes("100")).length > 0 && (
+            <div>
+              <div style={{padding:"10px 20px",fontSize:11,fontWeight:700,color:"#f87171",background:"#450a0a",borderBottom:"1px solid #7f1d1d",letterSpacing:1}}>⚠ ITEM FOCUS — 100% LOSS (LIKELY NOT RUNG UP)</div>
+              {(report.topAuditIssues||[]).filter(i=>i.lossType==="not_rung_up"||i.pctMissing?.includes("100")).map((iss,i)=>(
+                <div key={i} style={{padding:"12px 20px",borderBottom:"1px solid #111827",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:13}}>{iss.brand}</div>
+                    <div style={{fontSize:11,color:"#9ca3af",marginTop:2}}>{iss.recommendation||"Check POS and camera footage — drink likely not rung up."}</div>
+                  </div>
+                  <Pill color="red">100% Loss</Pill>
+                </div>
+              ))}
+            </div>
+          )}
         </>}
 
         {/* ISSUES */}
