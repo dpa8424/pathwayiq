@@ -218,9 +218,17 @@ ${detailed.slice(0,5000)}
 ${summary.slice(0,5000)}
 
 Return this exact JSON:
-{"staffReport":{"liquor":{"oz":0,"bottles":0,"pct":"","rating":""},"wine":{"oz":0,"bottles":0,"pct":"","rating":""},"champagne":{"oz":0,"bottles":0,"pct":"","rating":""},"beer":{"bottles":0,"cases":0,"pct":"","rating":""},"overallRating":"","potentialRevenueLost":""},"topAuditIssues":[{"category":"","brand":"","used":"","sold":"","missing":"","pctMissing":"","severity":"high"}],"categoryPerformance":[{"name":"","pourCost":"","idealPourCost":"","sculptureRating":"","pctMissing":""}],"keyInsights":[{"type":"warning","title":"","detail":""}],"inventorySummary":{"totalOnHandCost":"","totalRevenue":"","grandTotalPourCost":"","weeklyVarianceCost":""}}
+{"staffReport":{"liquor":{"oz":0,"bottles":0,"pct":"","rating":""},"wine":{"oz":0,"bottles":0,"pct":"","rating":""},"champagne":{"oz":0,"bottles":0,"pct":"","rating":""},"beer":{"bottles":0,"cases":0,"pct":"","rating":""},"overallRating":"","potentialRevenueLost":""},"topAuditIssues":[{"category":"","brand":"","used":"","sold":"","missing":"","pctMissing":"","severity":"high","lossType":"","recommendation":""}],"categoryPerformance":[{"name":"","pourCost":"","idealPourCost":"","sculptureRating":"","pctMissing":""}],"keyInsights":[{"type":"warning","title":"","detail":""}],"inventorySummary":{"totalOnHandCost":"","totalRevenue":"","grandTotalPourCost":"","weeklyVarianceCost":""},"deadStock":[{"brand":"","category":"","onHand":"","lastUsed":"","recommendation":""}],"highValueAlerts":[{"brand":"","category":"","unitCost":"","missing":"","dollarLoss":"","likelyCause":"","action":""}]}
 
-Rules: rating targets: liquor<3%, wine<5%, champagne<5%, beer<2%. 5-8 top issues. 4-6 insights. $ prefix on money. % suffix on percents. Overall rating = weighted average. Keep insight detail under 100 chars.`);
+Rules:
+- rating targets: liquor<3%, wine<5%, champagne<5%, beer<2%
+- topAuditIssues: pick 5-8 most significant. For each add lossType: "not_rung_up" (100% single pour), "theft_or_comp" (>30%), "over_pour" (10-30%), "acceptable" (<10%). Add recommendation: specific action for that item.
+- deadStock: items with zero or near-zero usage this period. Max 3 items.
+- highValueAlerts: only spirits with unit cost over $35 AND significant variance. Max 2 items.
+- keyInsights: 4-6 insights mixing positives and warnings
+- All $ values include $ prefix. All % include % suffix.
+- Keep insight detail under 100 chars.
+- Overall rating = weighted average of category ratings.`);
       const parsed = JSON.parse(raw.replace(/^```json\s*/i,"").replace(/```$/i,"").trim());
       setReport(parsed);
       setStatus("pending");
@@ -240,7 +248,7 @@ Rules: rating targets: liquor<3%, wine<5%, champagne<5%, beer<2%. 5-8 top issues
       const issues = rpt.topAuditIssues||[];
       const body = await callClaude(`You are JP Szaltis, a trusted hospitality advisor at Sculpture Hospitality. Write a warm, direct, personalized weekly audit email to the team at ${client.name}.
 
-Tone: conversational trusted advisor, NOT a dry auditor. Reference specific brands. Call out wins AND problems. Focus on brands that sold only 1 drink as teaching moments. Write like a human.
+TONE: Conversational trusted advisor — NOT a dry auditor. You care about their success. Write like a human who knows this business deeply. Be specific, be warm, be actionable.
 
 AUDIT DATA:
 - Overall Bevinco Rating: ${sr.overallRating}
@@ -251,13 +259,44 @@ AUDIT DATA:
 - Beer: ${sr.beer?.bottles} btl missing, Rating: ${sr.beer?.rating}
 - Auditor notes: ${feedback||"None provided"}
 
-TOP ISSUES:
-${issues.map(i=>`- ${i.brand}: ${i.missing} oz missing, ${i.pctMissing}`).join("\n")}
+TOP ISSUES (use these exact brands and numbers):
+${issues.map(i=>`- ${i.brand}: used ${i.used}, sold ${i.sold}, missing ${i.missing} (${i.pctMissing})`).join("\n")}
 
-Write the email body using ONLY <p>, <ul>, <li>, <strong>, <br> tags. No html/head/body/style tags. No markdown. Start with "Hey Team," and end with:
-<p style="margin-top:24px;font-size:13px;color:#374151"><strong>James P. Szaltis</strong><br/>Offices: Pensacola, Ft Walton, Destin, and Orlando<br/>Sculpture Hospitality<br/>M 407.810.2188<br/>E j.szaltis@sculpturehospitality.com<br/>W sculpturehospitality.com</p>
+CRITICAL RULES — follow every one of these:
 
-Include: 1) Warm opener 2) Category wins 3) Focus Areas This Week with top 3-5 brands + oz + % 4) Other Notable Losses for 1-drink over-pours 5) Encouraging close.`,2000);
+1. FOCUS AREAS: Pick MAXIMUM 3–5 items as focus areas. Never more. Overwhelming staff with 10+ items kills results. Choose the highest-impact ones only.
+
+2. LOSS % INTERPRETATION — use this framework for every item you call out:
+   - 100% loss on a single pour = almost certainly NOT RUNG UP. Flag this explicitly: "This drink was likely not rung up. I'd recommend pulling camera footage and addressing this directly with the bartender on shift."
+   - Above 30% loss = free drinks or missing bottles. Flag as possible theft or unauthorized comps.
+   - 10–30% loss = likely over-pouring. Recommend a pour test.
+   - Under 10% = acceptable, no action needed. Don't call these out as problems.
+
+3. SOLUTION-ORIENTED: Never just identify a problem — always prescribe the specific fix. Examples:
+   - Over-pouring a floater liqueur → "Schedule a pour test for [brand] — floaters are notoriously hard to free-pour accurately. A jigger or measured pour guide will fix this immediately."
+   - High loss on a premium spirit → "Pull [brand] and do a spot count mid-shift this week."
+   - 100% single pour loss → "Check the POS for [brand] transactions and cross-reference with camera footage from [shift]."
+
+4. DEAD STOCK CALLOUT: Identify ONE item with zero or near-zero usage and recommend a specific action — either: a cocktail recipe using that spirit, a temporary price reduction to move it, or moving it to the well temporarily. Keep this to ONE item only — don't list multiple dead stock items.
+
+5. HIGH-VALUE DEEP DIVE: If any premium spirit (tequila $40+, bourbon $35+, scotch $50+, premium vodka $35+) shows significant variance, give it a dedicated paragraph with: estimated dollar loss, likely cause, and specific corrective action for that bartender.
+
+6. CELEBRATE WINS: If any category is performing well (rating 98%+, missing under 5%), call it out with genuine enthusiasm. Staff need to hear what they're doing right.
+
+7. NEVER mention more than 5 brands total in the focus areas section. Additional issues belong in a brief "Other items to watch" single line — not a full list.
+
+Write the email body using ONLY <p>, <ul>, <li>, <strong>, <br> tags. No html/head/body/style tags. No markdown.
+
+STRUCTURE (in this order):
+1. "Hey Team," — warm personalized opener referencing what stood out this week
+2. What's going well — celebrate any category wins genuinely
+3. "Focus Areas This Week" — MAX 3–5 items with oz, %, and specific solution for each
+4. "High-Value Alert" — only if a premium spirit has significant variance (skip section if none)
+5. "This Week's Dead Stock Recommendation" — ONE item, ONE specific action
+6. "One to Watch" — if any single-pour 100% loss item exists, call it out with camera/POS recommendation
+7. Brief encouraging close — one or two sentences
+8. End with this exact signature:
+<p style="margin-top:24px;font-size:13px;color:#374151"><strong>James P. Szaltis</strong><br/>Offices: Pensacola, Ft Walton, Destin, and Orlando<br/>Sculpture Hospitality<br/>M 407.810.2188<br/>E j.szaltis@sculpturehospitality.com<br/>W sculpturehospitality.com</p>`,2000);
       setEmailHtml(body);
       setEditEmail(body);
     } catch(e) {
