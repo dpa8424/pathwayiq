@@ -47,8 +47,9 @@ const B = {
 const MODEL = "claude-sonnet-4-20250514";
 
 const USERS = [
-  { id:1, name:"Admin User",  email:"admin@pathwayiq.com",         password:"pathway2024",   role:"Auditor" },
-  { id:2, name:"JP Szaltis",  email:"jp@sculpturehospitality.com", password:"sculpture2024", role:"Manager" },
+  { id:1, name:"Admin User",  email:"admin@pathwayiq.com",           password:"pathway2024",   role:"Auditor" },
+  { id:2, name:"JP Szaltis",  email:"jp@sculpturehospitality.com",   password:"sculpture2024", role:"Manager" },
+  { id:3, name:"Kate Plomp",  email:"k.plomp@sculpturehospitality.com", password:"sculpture2024", role:"Auditor" },
 ];
 
 const generatePeriods = () => {
@@ -418,7 +419,7 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
           ))}
           {loginErr&&<div style={{fontSize:12,color:B.red}}>{loginErr}</div>}
           <Btn onClick={handleLogin} color="gold">Sign In →</Btn>
-          <div style={{fontSize:11,textAlign:"center",color:B.steel}}>admin@pathwayiq.com </div>
+          <div style={{fontSize:11,textAlign:"center",color:B.steel}}>admin@pathwayiq.com / pathway2024</div>
         </div>
       </div>
     </div>
