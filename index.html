@@ -45,9 +45,8 @@ const B = {
 };
 
 const WORKER = "https://claude-proxy.dan-ab7.workers.dev/";
-const MODEL = "claude-sonnet-4-20250514";
-
-// ── No users or passwords stored here — auth handled by Cloudflare Worker ──
+const MODEL  = "claude-sonnet-4-20250514";
+const USERS  = []; // Auth handled server-side in Cloudflare Worker — this is intentionally empty
 
 const generatePeriods = () => {
   const periods = [];
@@ -420,7 +419,7 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
           ))}
           {loginErr&&<div style={{fontSize:12,color:B.red}}>{loginErr}</div>}
           <Btn onClick={handleLogin} color="gold">Sign In →</Btn>
-          <div style={{fontSize:11,textAlign:"center",color:B.steel}}>admin@pathwayiq.com / pathway2024</div>
+          <div style={{fontSize:11,textAlign:"center",color:B.steel,marginTop:4}}>Demo: admin@pathwayiq.com / pathway2024</div>
         </div>
       </div>
     </div>
