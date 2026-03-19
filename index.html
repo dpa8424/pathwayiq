@@ -45,6 +45,7 @@ const B = {
 };
 
 const WORKER = "https://claude-proxy.dan-ab7.workers.dev/";
+const MODEL = "claude-sonnet-4-20250514";
 
 // ── No users or passwords stored here — auth handled by Cloudflare Worker ──
 
@@ -176,6 +177,7 @@ const Btn = ({onClick,disabled,color="gold",children,small}) => {
 // ── MAIN APP ─────────────────────────────────────────────────────────────────
 function App() {
   const [user,       setUser]       = useState(null);
+  const [token,      setToken]      = useState(null);
   const [screen,     setScreen]     = useState("login");
   const [clients,    setClients]    = useState(INIT_CLIENTS);
   const [selClient,  setSelClient]  = useState(null);
@@ -196,7 +198,6 @@ function App() {
   const [loginErr,   setLoginErr]   = useState("");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPass,  setLoginPass]  = useState("");
-  const [token, setToken] = useState(null);
   const factRef = useRef(null);
 
   useEffect(()=>{
@@ -383,7 +384,7 @@ ${(rpt?.topAuditIssues||[]).map(i=>`<tr><td><strong>${i.brand}</strong><br/><spa
           {sub&&<span style={{fontSize:11,color:B.steel,marginRight:8}}>{sub}</span>}
           <button onClick={()=>setScreen("history")} style={{fontSize:11,fontWeight:600,padding:"6px 14px",borderRadius:8,border:`1px solid ${B.navy2}`,background:"transparent",color:B.steel,cursor:"pointer"}}>📋 History</button>
           <span style={{fontSize:11,padding:"6px 12px",borderRadius:8,background:B.navy2,color:B.steel}}>{user?.name} · {user?.role}</span>
-          <button onClick={()=>{setUser(null);setScreen("login");resetForm();}} style={{fontSize:11,fontWeight:700,padding:"6px 14px",borderRadius:8,border:`1px solid ${B.redBd}`,background:B.redBg,color:B.red,cursor:"pointer"}}>Sign Out</button>
+          <button onClick={()=>{setUser(null);setToken(null);setScreen("login");resetForm();}} style={{fontSize:11,fontWeight:700,padding:"6px 14px",borderRadius:8,border:`1px solid ${B.redBd}`,background:B.redBg,color:B.red,cursor:"pointer"}}>Sign Out</button>
         </div>
       </div>
     </div>
