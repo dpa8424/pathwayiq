@@ -46,7 +46,11 @@ const B = {
 
 const WORKER = "https://claude-proxy.dan-ab7.workers.dev/";
 const MODEL  = "claude-sonnet-4-20250514";
-const USERS  = []; // Auth handled server-side in Cloudflare Worker — this is intentionally empty
+const USERS  = [
+  {id:1, name:"Admin User", email:"dan@pathwayiq.com",                    password:"pathway2024",   role:"Auditor"},
+  {id:2, name:"JP Szaltis", email:"jp@sculpturehospitality.com",           password:"sculpture2024", role:"Manager"},
+  {id:3, name:"Kate Plomp", email:"k.plomp@sculpturehospitality.com",      password:"sculpture2024", role:"Auditor"},
+];
 
 const generatePeriods = () => {
   const periods = [];
