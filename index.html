@@ -202,6 +202,7 @@ function App() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPass,  setLoginPass]  = useState("");
   const factRef = useRef(null);
+  const client = clients.find(c=>c.id===selClient);
 
   useEffect(()=>{
     if(screen==="processing"){factRef.current=setInterval(()=>setFactIdx(i=>(i+1)%FUN_FACTS.length),4000);}
