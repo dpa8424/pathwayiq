@@ -46,11 +46,7 @@ const B = {
 
 const WORKER = "https://claude-proxy.dan-ab7.workers.dev/";
 const MODEL  = "claude-sonnet-4-20250514";
-const USERS  = [
-  {id:1, name:"Admin User", email:"dan@pathwayiq.com",                    password:"pathway2024",   role:"Auditor"},
-  {id:2, name:"JP Szaltis", email:"jp@sculpturehospitality.com",           password:"sculpture2024", role:"Manager"},
-  {id:3, name:"Kate Plomp", email:"k.plomp@sculpturehospitality.com",      password:"sculpture2024", role:"Auditor"},
-];
+// ── No credentials stored here. Auth is handled by Cloudflare Worker. ────────
 
 const generatePeriods = () => {
   const periods = [];
@@ -231,7 +227,10 @@ function App() {
     const resp = await fetch(WORKER, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-      body: JSON.stringify({ action: "claude", payload: { model: "claude-sonnet-4-20250514", max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] } })
+      body: JSON.stringify({
+        action: "claude",
+        payload: { model: MODEL, max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] }
+      })
     });
     const data = await resp.json();
     if (data.error) {
