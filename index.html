@@ -56,9 +56,13 @@ const PERIODS = generatePeriods();
 const fmt = d=>d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
 
 const INIT_CLIENTS = [
-  {id:1,name:"Nonna's",               email:"dan@madcapvc.com",contact:"Nonna's Team",  type:"Restaurant",lastAudit:new Date("2026-02-08"),audits:[]},
-  {id:2,name:"The Anvil Bar & Refuge", email:"dan@madcapvc.com",contact:"Anvil Team",    type:"Bar",       lastAudit:new Date("2026-02-01"),audits:[]},
-  {id:3,name:"Seaside Grille",         email:"dan@madcapvc.com",contact:"Seaside Team",  type:"Restaurant",lastAudit:new Date("2026-01-26"),audits:[]},
+  {id:1, name:"Nonna's",               email:"j.szaltis@sculpturehospitality.com",  contact:"Nonna's Team",  type:"Restaurant", location:"Pensacola, FL",    lastAudit:new Date("2026-02-08"), audits:[]},
+  {id:4, name:"Fairfield",              email:"j.szaltis@sculpturehospitality.com",  contact:"Madison",       type:"Hotel",      location:"Pensacola, FL",    lastAudit:new Date("2026-03-01"), audits:[]},
+  {id:5, name:"Holiday Inn",            email:"j.szaltis@sculpturehospitality.com",  contact:"Devin",         type:"Hotel",      location:"Pensacola, FL",    lastAudit:new Date("2026-03-01"), audits:[]},
+  {id:6, name:"Hilton",                 email:"j.szaltis@sculpturehospitality.com",  contact:"Marissa",       type:"Hotel",      location:"Pensacola, FL",    lastAudit:new Date("2026-03-01"), audits:[]},
+  {id:7, name:"Station",                email:"j.szaltis@sculpturehospitality.com",  contact:"Alex",          type:"Restaurant", location:"Sanford, FL",      lastAudit:new Date("2026-03-01"), audits:[]},
+  {id:8, name:"Wally's",                email:"j.szaltis@sculpturehospitality.com",  contact:"Jamie",         type:"Bar",        location:"Orlando, FL",      lastAudit:new Date("2026-03-01"), audits:[]},
+  {id:9, name:"Hideaway",               email:"j.szaltis@sculpturehospitality.com",  contact:"Jen",           type:"Bar",        location:"Orlando, FL",      lastAudit:new Date("2026-03-01"), audits:[]},
 ];
 
 const FUN_FACTS = [
@@ -242,9 +246,17 @@ Return this exact JSON:
 
 Rules:
 - rating targets: liquor<3%, wine<5%, champagne<5%, beer<2%
-- topAuditIssues: 5-8 items. lossType: not_rung_up(100% single pour) theft_or_comp(>30%) over_pour(10-30%) acceptable(<10%). Add shiftNote for 100% loss items analyzing inventory movement to estimate when pour occurred. Add recommendation with specific fix.
+- topAuditIssues: 5-8 items. Rules for selection:
+  * EXCLUDE items that are house substitutes or menu equivalents (e.g. house limoncello vs branded limoncello — these are the same product, not a real variance)
+  * EXCLUDE items that do not appear on the client's actual inventory/menu — if a brand shows up but has no on-hand quantity or purchase history, it likely does not belong to this client
+  * PRIORITIZE 100% loss items — especially low-volume spirits like Frangelico, flavored vodkas, coconut rums, well brands. These are the most actionable
+  * For brand substitution patterns: if a well/house brand (e.g. Jose Cuervo) shows high variance while a premium version (e.g. Lalo Tequila) shows low usage, flag this as a likely brand substitution — include BOTH brands and the unit cost difference from the inteliPar report
+  * lossType: not_rung_up(100% single pour) theft_or_comp(>30%) over_pour(10-30%) brand_sub(substitution pattern) acceptable(<10%)
+  * recommendation language rules: NEVER say "remind staff of standard pour sizes" for a single brand — that applies to everything. Instead say "Looks like this may be getting over-poured" or "We may have some misrings here." Only recommend pour training if the OVERALL report looks bad across multiple categories.
+  * shiftNote: for 100% loss or >30% loss items, analyze inventory movement in the Detailed Variance Report to estimate WHEN the pour likely occurred. Give specific camera review window.
+  * unitCost: pull from inteliPar for every item
 - deadStock: zero/near-zero usage items, max 3
-- highValueAlerts: spirits $35+ with significant variance, max 2
+- highValueAlerts: spirits $35+ with significant variance, max 2. Include unit cost from inteliPar.
 - keyInsights: 4-6 mixing positives and warnings
 - $ prefix on money, % suffix on percents, insight detail under 100 chars
 - overallRating = weighted average of category ratings`);
@@ -277,12 +289,17 @@ ${issues.map(i=>`- ${i.brand}: used ${i.used}, sold ${i.sold}, missing ${i.missi
 
 RULES:
 1. MAX 3-5 focus areas. Never more.
-2. 100% single pour = not rung up. Flag camera/POS review.
+2. 100% single pour = not rung up. Flag camera/POS review. Prioritize well brands and low-volume spirits (Frangelico, coconut rum, flavored vodkas).
 3. >30% = theft/comp flag. 10-30% = over-pour. <10% = skip.
-4. Every problem gets a specific fix.
-5. ONE dead stock item with ONE specific action.
-6. Premium spirits ($35+) with variance get a dedicated paragraph.
-7. Celebrate wins for categories 98%+.
+4. LANGUAGE RULES for over-pour:
+   - NEVER say "remind staff of standard pour sizes" for a single brand — that applies to all pours universally
+   - Instead say: "Looks like [brand] may be getting over-poured" or "We might have some misrings on [brand]"
+   - Only recommend pour training if MULTIPLE categories are performing poorly overall
+5. BRAND SUBSTITUTION: If a well/house brand shows high variance while a premium version shows low usage (e.g. Jose Cuervo missing while Lalo Tequila has low sales), call this out as a likely brand substitution. Mention the cost difference between the two bottles if available.
+6. EXCLUDE house substitutes — if limoncello variance is due to a house version being poured, this is not a real loss and should not be called out.
+7. ONE dead stock item with ONE specific action (cocktail recipe, price drop, or move to well).
+8. Premium spirits ($35+) with variance get a dedicated paragraph.
+9. Celebrate wins for categories 98%+.
 
 Use ONLY <p><ul><li><strong><br> tags. No html/head/body/style. Start "Hey Team,"
 
@@ -317,7 +334,7 @@ TOP ISSUES
 ${issues.map(i=>`• ${i.brand} — ${i.missing} missing (${i.pctMissing})`).join("\n")}
 
 Sent via Pathway IQ | Approved by ${user.name} | ${new Date().toLocaleString()}`;
-    window.location.href=`mailto:${client.email}?subject=${encodeURIComponent(`${client.name} Bevinco Report — ${period.label}`)}&body=${encodeURIComponent(plain)}`;
+    window.location.href=`mailto:${client.email}?cc=k.plomp@sculpturehospitality.com&subject=${encodeURIComponent(`${client.name} Bevinco Report — ${period.label}`)}&body=${encodeURIComponent(plain)}`;
   };
 
   const handleDeny=()=>{setStatus("denied");resetForm();setScreen("input");};
@@ -430,7 +447,7 @@ Sent via Pathway IQ | Approved by ${user.name} | ${new Date().toLocaleString()}`
         <label style={{fontSize:11,fontWeight:700,color:B.steel,letterSpacing:"0.1em",display:"block",marginBottom:6}}>CLIENT</label>
         <select value={selClient||""} onChange={e=>setSelClient(Number(e.target.value))} style={{...inp,fontWeight:600}}>
           <option value="">— Select a client —</option>
-          {INIT_CLIENTS.map(c=><option key={c.id} value={c.id}>{c.name} ({c.type})</option>)}
+          {INIT_CLIENTS.map(c=><option key={c.id} value={c.id}>{c.name} — {c.location} ({c.type})</option>)}
         </select>
       </div>
       <div>
